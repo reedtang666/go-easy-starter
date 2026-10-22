@@ -31,3 +31,19 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Local configuration, development tools and runtime output
+.env.*
+!.env.example
+manifest/config/config.yaml
+hack/config.yaml
+.tools/
+bin/
+storage/
+logs/
+*.log
+resource/
+# Session-only implementation notes
+task_plan.md
+findings.md
+progress.md

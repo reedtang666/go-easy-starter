@@ -1,0 +1,18 @@
+# Copy to hack/config.yaml and configure your own development database.
+gfcli:
+  run:
+    path: "."
+    watchPaths: "manifest/config/*.yaml"
+  gen:
+    ctrl:
+      srcFolder: api
+      dstFolder: internal/controller
+    service:
+      srcFolder: internal/logic
+      dstFolder: internal/service
+      clear: false
+    dao:
+      - link: "pgsql:host=127.0.0.1 port=5432 user=starter password=starter dbname=starter sslmode=disable"
+        tables: "users,attachments,example_items,example_task_receipts"
+        descriptionTag: true
+        noModelComment: true

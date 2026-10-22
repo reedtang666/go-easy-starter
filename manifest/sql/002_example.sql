@@ -1,0 +1,17 @@
+BEGIN;
+CREATE TABLE example_items (
+ id BIGSERIAL PRIMARY KEY,
+ owner_id BIGINT NOT NULL REFERENCES users(id),
+ title VARCHAR(200) NOT NULL,
+ content TEXT NOT NULL DEFAULT '',
+ task_runs INTEGER NOT NULL DEFAULT 0,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX example_items_owner_created_idx ON example_items(owner_id,created_at DESC);
+CREATE TABLE example_task_receipts (
+ task_key VARCHAR(128) PRIMARY KEY,
+ item_id BIGINT NOT NULL REFERENCES example_items(id) ON DELETE CASCADE,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+COMMIT;

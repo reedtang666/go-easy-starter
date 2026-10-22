@@ -1,0 +1,24 @@
+[Unit]
+Description=Go Easy Starter (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=starter
+Group=starter
+WorkingDirectory=/opt/go-easy-starter
+ExecStart=/opt/go-easy-starter/bin/starter %i --config /etc/go-easy-starter/config.yaml
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=45
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/go-easy-starter/storage
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

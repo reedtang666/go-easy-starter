@@ -1,0 +1,11 @@
+.git
+.tools
+.env*
+manifest/config/config.yaml
+hack/config.yaml
+storage
+bin
+coverage*
+task_plan.md
+findings.md
+progress.md

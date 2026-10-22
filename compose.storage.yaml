@@ -1,0 +1,16 @@
+# Optional: docker compose -f compose.yaml -f compose.storage.yaml up -d minio
+# Provide an audited/built image; see docs/storage.md and the official release notes.
+services:
+  minio:
+    image: ${STARTER_MINIO_IMAGE:?set STARTER_MINIO_IMAGE to your MinIO image with a fixed tag}
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${STARTER_MINIO_USER:-starter-local}
+      MINIO_ROOT_PASSWORD: ${STARTER_MINIO_PASSWORD:-starter-local-development}
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - minio-data:/data
+volumes:
+  minio-data:

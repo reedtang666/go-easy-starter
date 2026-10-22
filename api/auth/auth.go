@@ -1,0 +1,18 @@
+// =================================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// =================================================================================
+
+package auth
+
+import (
+	"context"
+
+	"github.com/reedtang666/go-easy-starter/api/auth/v1"
+)
+
+type IAuthV1 interface {
+	Register(ctx context.Context, req *v1.RegisterReq) (res *v1.RegisterRes, err error)
+	Login(ctx context.Context, req *v1.LoginReq) (res *v1.LoginRes, err error)
+	Refresh(ctx context.Context, req *v1.RefreshReq) (res *v1.RefreshRes, err error)
+	Logout(ctx context.Context, req *v1.LogoutReq) (res *v1.LogoutRes, err error)
+}
