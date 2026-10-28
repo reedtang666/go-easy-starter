@@ -47,3 +47,7 @@ resource/
 task_plan.md
 findings.md
 progress.md
+
+# Development command coordination
+.scaffold.lock
+.migration.lock

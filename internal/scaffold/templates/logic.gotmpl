@@ -1,0 +1,50 @@
+package {{.Name}}
+
+import (
+	"context"
+	"time"
+	"github.com/gogf/gf/v2/database/gdb"
+	"github.com/gogf/gf/v2/frame/g"
+	"{{.Module}}/internal/dao"
+	"{{.Module}}/internal/library/query"
+	"{{.Module}}/internal/library/response"
+	"{{.Module}}/internal/model"
+	"{{.Module}}/internal/model/view"
+)
+
+type s{{.Camel}} struct { store *dao.Store }
+func New(store *dao.Store) *s{{.Camel}} { return &s{{.Camel}}{store: store} }
+func (s *s{{.Camel}}) items(ctx context.Context) *gdb.Model {
+	return s.store.DB.Model("{{.Name}}_items").Ctx(ctx).Safe()
+}
+func (s *s{{.Camel}}) Get(ctx context.Context, owner, id int64) (*view.{{.Camel}}Item, error) {
+	var item *view.{{.Camel}}Item
+	if err := s.items(ctx).Where("id", id).Where("owner_id", owner).Scan(&item); err != nil { return nil, dao.Error(err) }
+	if item == nil { return nil, response.Fail(404, "ITEM_NOT_FOUND", "记录不存在") }
+	return item, nil
+}
+func (s *s{{.Camel}}) List(ctx context.Context, owner int64, input model.ListQuery) (*model.List[*view.{{.Camel}}Item], error) {
+	p := input.Page.Normalized()
+	m, order, err := query.Apply(s.items(ctx).Where("owner_id", owner), input)
+	if err != nil { return nil, err }
+	total, err := m.Clone().Count()
+	if err != nil { return nil, dao.Error(err) }
+	list := []*view.{{.Camel}}Item{}
+	if err = m.Clone().Order(order).Page(p.Page, p.PageSize).Scan(&list); err != nil { return nil, dao.Error(err) }
+	return &model.List[*view.{{.Camel}}Item]{List: list, Total: total, Page: p.Page, PageSize: p.PageSize}, nil
+}
+func (s *s{{.Camel}}) Create(ctx context.Context, owner int64, title, content string) (*view.{{.Camel}}Item, error) {
+	id, err := s.store.InsertID(ctx, "{{.Name}}_items", g.Map{"owner_id": owner, "title": title, "content": content})
+	if err != nil { return nil, err }
+	return s.Get(ctx, owner, id)
+}
+func (s *s{{.Camel}}) Update(ctx context.Context, owner, id int64, title, content string) (*view.{{.Camel}}Item, error) {
+	if _, err := s.Get(ctx, owner, id); err != nil { return nil, err }
+	if _, err := s.items(ctx).Where("id", id).Where("owner_id", owner).Data(g.Map{"title": title, "content": content, "updated_at": time.Now()}).Update(); err != nil { return nil, dao.Error(err) }
+	return s.Get(ctx, owner, id)
+}
+func (s *s{{.Camel}}) Delete(ctx context.Context, owner, id int64) error {
+	if _, err := s.Get(ctx, owner, id); err != nil { return err }
+	_, err := s.items(ctx).Where("id", id).Where("owner_id", owner).Delete()
+	return dao.Error(err)
+}

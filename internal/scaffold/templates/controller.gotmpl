@@ -1,0 +1,38 @@
+package {{.Name}}
+
+import (
+	"context"
+	"{{.Module}}/api/{{.Name}}/v1"
+	"{{.Module}}/internal/library/contexts"
+	"{{.Module}}/internal/service"
+)
+
+{{if eq .Action "List"}}
+func (c *ControllerV1) List(ctx context.Context, req *v1.ListReq) (*v1.ListRes, error) {
+	list, err := service.{{.Camel}}().List(ctx, contexts.Get(ctx).UserID, req.ListQuery)
+	return &v1.ListRes{List: list}, err
+}
+{{end}}
+{{if eq .Action "Create"}}
+func (c *ControllerV1) Create(ctx context.Context, req *v1.CreateReq) (*v1.CreateRes, error) {
+	item, err := service.{{.Camel}}().Create(ctx, contexts.Get(ctx).UserID, req.Title, req.Content)
+	return &v1.CreateRes{Item: item}, err
+}
+{{end}}
+{{if eq .Action "Get"}}
+func (c *ControllerV1) Get(ctx context.Context, req *v1.GetReq) (*v1.GetRes, error) {
+	item, err := service.{{.Camel}}().Get(ctx, contexts.Get(ctx).UserID, req.Id)
+	return &v1.GetRes{Item: item}, err
+}
+{{end}}
+{{if eq .Action "Update"}}
+func (c *ControllerV1) Update(ctx context.Context, req *v1.UpdateReq) (*v1.UpdateRes, error) {
+	item, err := service.{{.Camel}}().Update(ctx, contexts.Get(ctx).UserID, req.Id, req.Title, req.Content)
+	return &v1.UpdateRes{Item: item}, err
+}
+{{end}}
+{{if eq .Action "Delete"}}
+func (c *ControllerV1) Delete(ctx context.Context, req *v1.DeleteReq) (*v1.DeleteRes, error) {
+	return &v1.DeleteRes{}, service.{{.Camel}}().Delete(ctx, contexts.Get(ctx).UserID, req.Id)
+}
+{{end}}

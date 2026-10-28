@@ -15,7 +15,7 @@ import (
 type (
 	IExample interface {
 		Get(ctx context.Context, owner int64, id int64) (*view.ExampleItem, error)
-		List(ctx context.Context, owner int64, p model.Page) (*model.List[*view.ExampleItem], error)
+		List(ctx context.Context, owner int64, input model.ListQuery) (*model.List[*view.ExampleItem], error)
 		Create(ctx context.Context, owner int64, title string, content string) (*view.ExampleItem, error)
 		Update(ctx context.Context, owner int64, id int64, title string, content string) (*view.ExampleItem, error)
 		Delete(ctx context.Context, owner int64, id int64) error

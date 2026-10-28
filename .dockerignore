@@ -9,3 +9,5 @@ coverage*
 task_plan.md
 findings.md
 progress.md
+.scaffold.lock
+**/.migration.lock

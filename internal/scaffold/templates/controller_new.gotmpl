@@ -1,0 +1,6 @@
+package {{.Name}}
+
+import {{.Lower}}API "{{.Module}}/api/{{.Name}}"
+
+type ControllerV1 struct{}
+func NewV1() {{.Lower}}API.I{{.Camel}}V1 { return &ControllerV1{} }

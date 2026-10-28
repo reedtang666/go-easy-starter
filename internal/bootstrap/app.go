@@ -134,6 +134,7 @@ func New(ctx context.Context, c config.Config, role string) (_ *App, err error) 
 		service.RegisterAuth(auth)
 		service.RegisterFile(files)
 		service.RegisterExample(examplelogic.New(store))
+		registerModules(store)
 		tickets := ws.NewTickets(a.Redis["auth"], c.Redis.Auth.Prefix, time.Duration(c.WebSocket.TicketSeconds)*time.Second)
 		if c.WebSocket.Enabled {
 			a.Hub = ws.NewHub(c, tickets, auth.ValidateSession)

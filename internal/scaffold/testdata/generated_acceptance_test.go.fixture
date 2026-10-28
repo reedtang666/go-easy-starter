@@ -1,0 +1,80 @@
+//go:build integration
+
+package bootstrap_test
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"net/url"
+	"testing"
+	"time"
+
+	"github.com/reedtang666/go-easy-starter/internal/bootstrap"
+)
+
+func TestGeneratedModuleAcceptance(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	c := integrationConfig(t)
+	c.WebSocket.Enabled = false
+	app, err := bootstrap.New(ctx, c, "http")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Close()
+	if err := app.Start(); err != nil {
+		t.Fatal(err)
+	}
+	api := testAPI{t: t, base: fmt.Sprintf("http://127.0.0.1:%d", app.HTTP.GetListenedPort()), client: &http.Client{Timeout: 5 * time.Second}}
+	api.request("GET", "/health/ready", "", nil, 200)
+	api.request("GET", "/api/v1/article/items", "", nil, 401)
+	login := func(username string) string {
+		password := "GeneratedModule-password-123"
+		api.request("POST", "/api/v1/auth/register", "", map[string]any{"username": username, "password": password}, 200)
+		return data(api.request("POST", "/api/v1/auth/login", "", map[string]any{"username": username, "password": password, "deviceId": "module-acceptance"}, 200))["accessToken"].(string)
+	}
+	owner := login("article_owner")
+	other := login("article_other")
+	create := func(title string) map[string]any {
+		return data(api.request("POST", "/api/v1/article/items", owner, map[string]any{"title": title, "content": "initial"}, 200))["item"].(map[string]any)
+	}
+	first := create("alpha 100%_literal")
+	second := create("beta 100%_literal")
+	create("gamma unmatched")
+	id := int64(first["id"].(float64))
+	path := fmt.Sprintf("/api/v1/article/items/%d", id)
+	api.request("GET", path, owner, nil, 200)
+	api.request("GET", path, other, nil, 404)
+	api.request("PUT", path, other, map[string]any{"title": "stolen", "content": "denied"}, 404)
+	api.request("DELETE", path, other, nil, 404)
+	from := time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)
+	to := time.Now().Add(time.Hour).UTC().Format(time.RFC3339)
+	filter := url.Values{"keyword": {"100%_literal"}, "createdFrom": {from}, "createdTo": {to}, "sortBy": {"title"}, "sortOrder": {"desc"}, "page": {"1"}, "pageSize": {"1"}}
+	list := data(api.request("GET", "/api/v1/article/items?"+filter.Encode(), owner, nil, 200))
+	items := list["list"].([]any)
+	if list["total"].(float64) != 2 || len(items) != 1 || items[0].(map[string]any)["id"] != second["id"] {
+		t.Fatalf("incorrect filtered and sorted list: %#v", list)
+	}
+	filter.Set("page", "2")
+	list = data(api.request("GET", "/api/v1/article/items?"+filter.Encode(), owner, nil, 200))
+	if list["list"].([]any)[0].(map[string]any)["id"] != first["id"] {
+		t.Fatal("incorrect second page")
+	}
+	filter.Set("page", "1")
+	filter.Set("createdFrom", time.Now().Add(time.Hour).UTC().Format(time.RFC3339))
+	filter.Set("createdTo", time.Now().Add(2*time.Hour).UTC().Format(time.RFC3339))
+	if data(api.request("GET", "/api/v1/article/items?"+filter.Encode(), owner, nil, 200))["total"].(float64) != 0 {
+		t.Fatal("future date range returned existing records")
+	}
+	if data(api.request("GET", "/api/v1/article/items", other, nil, 200))["total"].(float64) != 0 {
+		t.Fatal("another user's list exposed records")
+	}
+	api.request("GET", "/api/v1/article/items?sortBy=owner_id", owner, nil, 400)
+	updated := data(api.request("PUT", path, owner, map[string]any{"title": "updated title", "content": "updated content"}, 200))["item"].(map[string]any)
+	if updated["title"] != "updated title" || updated["content"] != "updated content" {
+		t.Fatal("update did not persist")
+	}
+	api.request("DELETE", path, owner, nil, 200)
+	api.request("GET", path, owner, nil, 404)
+}

@@ -1,0 +1,12 @@
+package view
+
+import "time"
+
+type {{.Camel}}Item struct {
+	ID int64 `json:"id" orm:"id"`
+	OwnerID int64 `json:"ownerId" orm:"owner_id"`
+	Title string `json:"title" orm:"title"`
+	Content string `json:"content" orm:"content"`
+	CreatedAt time.Time `json:"createdAt" orm:"created_at"`
+	UpdatedAt time.Time `json:"updatedAt" orm:"updated_at"`
+}

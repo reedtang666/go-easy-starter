@@ -5,6 +5,7 @@ import (
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/reedtang666/go-easy-starter/internal/dao"
+	"github.com/reedtang666/go-easy-starter/internal/library/query"
 	"github.com/reedtang666/go-easy-starter/internal/library/response"
 	"github.com/reedtang666/go-easy-starter/internal/model"
 	view "github.com/reedtang666/go-easy-starter/internal/model/view"
@@ -25,15 +26,18 @@ func (s *sExample) Get(ctx context.Context, owner, id int64) (*view.ExampleItem,
 	}
 	return item, nil
 }
-func (s *sExample) List(ctx context.Context, owner int64, p model.Page) (*model.List[*view.ExampleItem], error) {
-	p = p.Normalized()
-	m := s.store.Items(ctx).Where("owner_id", owner)
+func (s *sExample) List(ctx context.Context, owner int64, input model.ListQuery) (*model.List[*view.ExampleItem], error) {
+	p := input.Page.Normalized()
+	m, order, e := query.Apply(s.store.Items(ctx).Where("owner_id", owner), input)
+	if e != nil {
+		return nil, e
+	}
 	total, e := m.Clone().Count()
 	if e != nil {
 		return nil, e
 	}
 	list := []*view.ExampleItem{}
-	e = m.Clone().OrderDesc("id").Page(p.Page, p.PageSize).Scan(&list)
+	e = m.Clone().Order(order).Page(p.Page, p.PageSize).Scan(&list)
 	return &model.List[*view.ExampleItem]{List: list, Total: total, Page: p.Page, PageSize: p.PageSize}, e
 }
 func (s *sExample) Create(ctx context.Context, owner int64, title, content string) (*view.ExampleItem, error) {

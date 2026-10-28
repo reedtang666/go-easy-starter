@@ -1,0 +1,36 @@
+package v1
+
+import (
+	"github.com/gogf/gf/v2/frame/g"
+	"{{.Module}}/internal/model"
+	"{{.Module}}/internal/model/view"
+)
+
+type ListReq struct {
+	g.Meta `path:"/{{.Name}}/items" method:"get" tags:"{{.Camel}}" summary:"查询本人记录" security:"BearerToken"`
+	model.ListQuery
+}
+type ListRes struct{ *model.List[*view.{{.Camel}}Item] }
+type CreateReq struct {
+	g.Meta `path:"/{{.Name}}/items" method:"post" tags:"{{.Camel}}" summary:"创建记录" security:"BearerToken"`
+	Title string `json:"title" v:"required|length:1,200"`
+	Content string `json:"content" v:"length:0,10000"`
+}
+type CreateRes struct { Item *view.{{.Camel}}Item `json:"item"` }
+type GetReq struct {
+	g.Meta `path:"/{{.Name}}/items/{id}" method:"get" tags:"{{.Camel}}" summary:"查询本人记录详情" security:"BearerToken"`
+	Id int64 `json:"id" in:"path" v:"required|min:1"`
+}
+type GetRes = CreateRes
+type UpdateReq struct {
+	g.Meta `path:"/{{.Name}}/items/{id}" method:"put" tags:"{{.Camel}}" summary:"更新本人记录" security:"BearerToken"`
+	Id int64 `json:"id" in:"path" v:"required|min:1"`
+	Title string `json:"title" v:"required|length:1,200"`
+	Content string `json:"content" v:"length:0,10000"`
+}
+type UpdateRes = CreateRes
+type DeleteReq struct {
+	g.Meta `path:"/{{.Name}}/items/{id}" method:"delete" tags:"{{.Camel}}" summary:"删除本人记录" security:"BearerToken"`
+	Id int64 `json:"id" in:"path" v:"required|min:1"`
+}
+type DeleteRes struct{}

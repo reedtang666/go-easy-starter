@@ -1,0 +1,9 @@
+CREATE TABLE {{.Name}}_items (
+ id BIGSERIAL PRIMARY KEY,
+ owner_id BIGINT NOT NULL REFERENCES users(id),
+ title VARCHAR(200) NOT NULL,
+ content TEXT NOT NULL DEFAULT '',
+ created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX {{.Name}}_owner_created_idx ON {{.Name}}_items(owner_id, created_at DESC);

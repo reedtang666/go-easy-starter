@@ -12,6 +12,7 @@
 - 可选 WebSocket：一次性票据、心跳、会话撤销检查、消息示例。
 - 参数校验、统一 JSON 响应、CORS、限流、健康检查、开发环境 Swagger。
 - GoFrame 代码生成、Makefile、Docker、Compose、systemd 与 GitHub Actions。
+- 业务模块脚手架、带搜索/时间筛选/排序的 CRUD 模板、带校验和的数据库版本迁移。
 
 WebSocket 默认关闭；默认仅启用本地上传，其他驱动按配置启用。没有后台管理、支付、短信或特定业务模块。
 
@@ -98,22 +99,22 @@ docker compose ps
 make db-init
 ```
 
-等价命令是 `go run . db-init`。它读取 `config.yaml` 中的 `database.url`，在一个事务中按顺序执行仓库自带的两个 SQL 文件：
+等价命令是 `go run . db-init`。它读取 `config.yaml` 中的 `database.url`，按顺序执行仓库自带的两个 SQL 文件，每个文件及其迁移记录在同一事务中提交：
 
 | SQL 文件 | 创建的表 |
 | --- | --- |
 | [`manifest/sql/001_init.sql`](manifest/sql/001_init.sql) | `users`（用户）、`attachments`（附件） |
 | [`manifest/sql/002_example.sql`](manifest/sql/002_example.sql) | `example_items`（CRUD 示例）、`example_task_receipts`（任务幂等记录） |
 
-成功后终端输出 `database initialized`，刷新数据库即可看到 **4 张表**。初始化命令只连接 PostgreSQL，不需要先启动 API 或 Redis。
+成功后终端输出 `database initialized`，刷新数据库即可看到 **4 张业务表**和 **1 张 `schema_migrations` 版本记录表**。初始化命令只连接 PostgreSQL，不需要先启动 API 或 Redis。
 
-也可以使用 Navicat 手动导入：选择本项目的空数据库，依次执行 **001 → 002** 两个文件的全部 SQL。手动导入和 `make db-init` 任选一种。
+也可以使用 Navicat 手动导入：选择本项目的空数据库，依次执行 **001 → 002** 两个文件的全部 SQL，再运行 `make db-baseline` 校验初始表结构并登记版本。手动导入和 `make db-init` 任选一种。
 
 注意：
 
 - `make db-init` 创建表、索引和约束，数据库本身需要提前创建；Docker 方式已由 Compose 创建。
 - 初始化只在首次执行。已有 `users` 表时会拒绝重复初始化，不会清空或重建已有数据。
-- 程序启动时不会自动建表或迁移；后续表结构变更通过独立编号 SQL 显式执行。
+- 程序启动时不会自动建表或迁移；后续通过 `make db-new NAME=...` 创建编号 SQL、填写变更，再用 `make db-up` 执行。
 - SQL 不预置登录账号，启动后通过注册接口创建用户。
 
 ### 4. 启动并确认连接正常
@@ -178,13 +179,57 @@ curl -sS http://localhost:8000/api/v1/files \
 
 认证默认 Access Token 15 分钟、Refresh Token 空闲 7 天且最长 30 天，并发刷新宽限 5 秒。客户端应串行刷新，成功后替换两个令牌。新登录会替换该用户的旧会话。
 
+## 快速创建自己的业务模块
+
+```sh
+make module NAME=article
+make db-status
+make db-up
+go run . all
+```
+
+生成器创建可直接编辑的 API、Controller、Logic、Service、View，以及编号 SQL `NNN_create_article_items.sql`，并自动接入服务注册和受保护路由。新接口位于 `/api/v1/article/items`，具备本人数据隔离、列表/创建/详情/更新/删除。
+
+生成模块不需要连接数据库、Redis 或安装 GoFrame CLI；创建后即可编译并执行迁移。模块名使用小写 snake_case，已有文件或 Go 符号冲突时拒绝覆盖。正在运行的服务需要重启以加载新代码。
+
+如果你使用的是旧版已建好 4 张业务表、尚无版本记录的数据库，先执行一次 `make db-baseline`，确认结构匹配后再执行 `make db-up`。全新空库可以直接 `make db-up` 应用全部 SQL。详细流程见 [开发文档](docs/development.md)和[数据库迁移](docs/migrations.md)。
+
+示例与新生成模块的列表接口都支持：
+
+| 参数 | 作用 |
+| --- | --- |
+| `page` / `pageSize` | 分页，默认 1 / 20，单页最多 100 |
+| `keyword` | 标题关键词，`%`、`_`、`!` 按字面搜索 |
+| `createdFrom` / `createdTo` | RFC3339 创建时间范围，包含起止端点，可只填一端 |
+| `sortBy` | `id`、`title`、`created_at`、`updated_at`，默认 `id` |
+| `sortOrder` | `asc` 或 `desc`，默认 `desc`；同值按 ID 稳定排序 |
+
+例如：`GET /api/v1/article/items?keyword=hello&sortBy=created_at&sortOrder=desc&pageSize=10`。请求仍需携带登录令牌。
+
+## 管理后续表结构变更
+
+```sh
+make db-new NAME=add_article_status
+# 编辑生成的 SQL，填写实际变更；仅有注释的草稿不会执行
+make db-status
+make db-up
+```
+
+`db-status` 只读展示 `pending` / `applied` 及异常状态；`db-up` 串行执行待应用版本，每个文件独立事务。已经执行过的 SQL 不要修改、删除或重命名，增加新的版本文件即可。脚本失败时该文件回滚，之前成功的版本保留，可修复未应用的 SQL 后重试。
+
+迁移不会自动回滚或清空已有数据库。特殊的非事务 DDL（例如 `CREATE INDEX CONCURRENTLY`）需要单独的运维步骤，详见[数据库迁移](docs/migrations.md)。
+
 ## 常用命令
 
 | 命令 | 用途 |
 | --- | --- |
 | `make setup` | 首次生成本地配置和随机密钥，拒绝覆盖已有文件 |
 | `make deps` | 使用 Docker Compose 启动本地 PostgreSQL 和 Redis |
-| `make db-init` | 首次连接已创建的空数据库，执行两个 SQL 并创建 4 张表 |
+| `make db-init` | 首次执行两个基础 SQL，创建 4 张业务表并登记版本 |
+| `make module NAME=article` | 创建 CRUD 模块、迁移 SQL，并注册服务与路由 |
+| `make db-new NAME=add_article_status` | 创建下一个编号的 SQL 草稿 |
+| `make db-status` / `make db-up` | 查看版本状态 / 应用待执行迁移 |
+| `make db-baseline` | 校验旧版初始表结构并登记 001、002，保留业务数据 |
 | `go run . all` | 本地启动 HTTP、消费者、调度器 |
 | `make http` / `make queue` / `make scheduler` | 分角色启动 |
 | `make build` | 构建 `bin/starter` |
@@ -213,6 +258,7 @@ manifest/             配置样例、SQL、Docker、systemd
 ```
 
 - [开发与代码生成](docs/development.md)
+- [数据库迁移](docs/migrations.md)
 - [上传、六种驱动与分片](docs/storage.md)
 - [队列、定时任务与 WebSocket](docs/queue-and-websocket.md)
 - [配置与部署](docs/deployment.md)

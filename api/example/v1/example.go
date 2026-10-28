@@ -8,7 +8,7 @@ import (
 
 type ListReq struct {
 	g.Meta `path:"/example/items" method:"get" tags:"示例" summary:"本人示例列表" security:"BearerToken"`
-	model.Page
+	model.ListQuery
 }
 type ListRes struct{ *model.List[*view.ExampleItem] }
 type CreateReq struct {

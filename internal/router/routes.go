@@ -47,6 +47,7 @@ func Register(s *ghttp.Server, c config.Config, redis *gredis.Redis) {
 			api.Group("/", func(private *ghttp.RouterGroup) {
 				private.Middleware(middleware.Auth)
 				private.Bind(userctrl.NewV1(), examplectrl.NewV1(), a.Logout)
+				registerModules(private)
 				if c.WebSocket.Enabled {
 					private.Bind(wsctrl.NewV1())
 				}

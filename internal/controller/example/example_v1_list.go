@@ -8,6 +8,6 @@ import (
 )
 
 func (c *ControllerV1) List(ctx context.Context, req *v1.ListReq) (*v1.ListRes, error) {
-	list, e := service.Example().List(ctx, contexts.Get(ctx).UserID, req.Page)
+	list, e := service.Example().List(ctx, contexts.Get(ctx).UserID, req.ListQuery)
 	return &v1.ListRes{List: list}, e
 }
